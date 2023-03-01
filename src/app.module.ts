@@ -3,20 +3,18 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { TaskModule } from './task/task.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
-import { User } from './user/user.entity';
-import { typeOrmConfig } from './config/typeorm.config';
+import { typeOrmConfigAsync } from './config/typeorm.config';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
     AuthModule,
     UserModule,
     TaskModule,
-    TypeOrmModule.forRoot(typeOrmConfig),
+    TypeOrmModule.forRootAsync(typeOrmConfigAsync),
+    ConfigModule.forRoot(),
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule {
-  constructor(private dataSourse: DataSource) {}
-}
+export class AppModule {}
