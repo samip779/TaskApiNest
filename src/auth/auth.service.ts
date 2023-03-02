@@ -3,12 +3,14 @@ import { AuthDto } from './dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from 'src/user/user.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
+    private readonly configService: ConfigService,
   ) {}
 
   async signin(dto: AuthDto) {
@@ -17,7 +19,6 @@ export class AuthService {
     if (!(await bcrypt.compare(dto.password, user.password))) {
       throw new ForbiddenException('password incorrect');
     }
-    delete user.password;
     return this.signToken(user.id, user.email);
   }
 
@@ -30,7 +31,10 @@ export class AuthService {
       email,
     };
 
-    const token = await this.jwtService.signAsync(payload);
+    const token = await this.jwtService.signAsync(payload, {
+      expiresIn: '8600s',
+      secret: this.configService.get('JWT_SECRET'),
+    });
 
     return {
       access_token: token,
