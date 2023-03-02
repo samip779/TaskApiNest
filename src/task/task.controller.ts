@@ -1,12 +1,22 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
-import { JwtGuard } from 'src/auth/guards';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 
+import { GetUser } from 'src/auth/decorator';
+import { JwtGuard } from 'src/auth/guards';
+import { User } from 'src/user/user.entity';
+import { CreateTaskDto } from './dto';
+import { TaskService } from './task.service';
+
+@UseGuards(JwtGuard)
 @Controller('task')
 export class TaskController {
-  @UseGuards(JwtGuard)
+  constructor(private taskService: TaskService) {}
   @Get()
-  findAll(@Req() req: Request) {
-    return { user: req.user };
+  findAll(@GetUser() user: User) {
+    return this.taskService.findAll(user);
+  }
+
+  @Post()
+  create(@GetUser() user: User, @Body() dto: CreateTaskDto) {
+    return this.taskService.create(dto, user);
   }
 }
