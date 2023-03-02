@@ -2,7 +2,7 @@ import { User } from 'src/user/user.entity';
 import {
   Column,
   Entity,
-  JoinTable,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -32,7 +32,15 @@ export class Task {
   })
   status: TaskStatus;
 
-  @ManyToOne(() => User, (user) => user.task, { onDelete: 'SET NULL' })
-  @JoinTable()
+  @Column()
+  userId: number;
+  @JoinColumn({ name: 'userId' })
+  @ManyToOne(() => User, (user) => user.tasks, { onDelete: 'SET NULL' })
   user: User;
 }
+
+// @Column()
+//   userId: string;
+//   @JoinColumn({ name: 'userId' })
+//   @ManyToOne(() => User, (user) => user.todos)
+//   user: User;

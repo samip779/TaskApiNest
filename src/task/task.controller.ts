@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 
 import { GetUser } from 'src/auth/decorator';
 import { JwtGuard } from 'src/auth/guards';
@@ -18,5 +27,10 @@ export class TaskController {
   @Post()
   create(@GetUser() user: User, @Body() dto: CreateTaskDto) {
     return this.taskService.create(dto, user);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @GetUser() user: User) {
+    return this.taskService.remove(+id, user);
   }
 }
