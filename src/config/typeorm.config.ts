@@ -3,6 +3,7 @@ import {
   TypeOrmModuleAsyncOptions,
   TypeOrmModuleOptions,
 } from '@nestjs/typeorm';
+import { Task } from 'src/task/task.entity';
 
 import { User } from 'src/user/user.entity';
 
@@ -16,7 +17,7 @@ export default class TypeOrmConfig {
       password: configService.get('DB_PASSWORD'),
       database: configService.get('DB_NAME'),
       synchronize: true,
-      entities: [User],
+      entities: [User, Task],
       logging: true,
     };
   }
