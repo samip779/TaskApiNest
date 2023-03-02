@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { Request } from 'express';
+import { CreateUserDto } from './dto';
 import { JwtGuard } from '../auth/guards';
+import { GetUser } from '../auth/decorator';
+import { User } from './user.entity';
 
+@UseGuards(JwtGuard)
 @Controller('user')
 export class UserController {
   constructor(private userService: UserService) {}
@@ -18,9 +20,8 @@ export class UserController {
     return this.userService.findAll();
   }
 
-  @UseGuards(JwtGuard)
   @Get('me')
-  findOne(@Req() req: Request) {
-    return { ...req.user };
+  findOne(@GetUser() user: User) {
+    return { ...user };
   }
 }
