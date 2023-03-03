@@ -1,7 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { Task, TaskStatus } from './task.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Equal, MoreThan, Repository } from 'typeorm';
+import { Equal, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { CreateTaskDto } from './dto';
 import { User } from 'src/user/user.entity';
 
@@ -14,7 +18,7 @@ export class TaskService {
   async create(dto: CreateTaskDto, user: User) {
     const task: Task = new Task();
     task.name = dto.name;
-    task.userId = user.id;
+    task.user_id = user.id;
 
     const tasks = await this.taskRepository.find({
       select: {
@@ -22,7 +26,7 @@ export class TaskService {
         order: true,
       },
       where: {
-        userId: Equal(user.id),
+        user_id: Equal(user.id),
         status: Equal(TaskStatus.TODO),
       },
     });
@@ -38,14 +42,19 @@ export class TaskService {
   }
 
   //   This method returns all the tasks for a specific user
-  findAll(user: User): Promise<Task[]> {
-    return this.taskRepository.findBy({ userId: user.id });
+  findAll(user: User, status: TaskStatus): Promise<Task[]> {
+    return this.taskRepository.find({
+      where: {
+        user_id: user.id,
+        status,
+      },
+    });
   }
 
   //   This method removes the task with provided id and maintains the order
   async remove(id: number, user: User) {
     const task = await this.taskRepository.findOne({
-      where: { id, userId: user.id },
+      where: { id, user_id: user.id },
     });
     if (!task) throw new BadRequestException('You dont have task with that id');
 
@@ -56,7 +65,7 @@ export class TaskService {
       },
       where: {
         order: MoreThan(task.order),
-        userId: Equal(user.id),
+        user_id: Equal(user.id),
         status: Equal(task.status),
       },
     });
@@ -70,5 +79,91 @@ export class TaskService {
 
     await this.taskRepository.delete(id);
     return { message: 'Task deleted successfully' };
+  }
+
+  // Change order of the task in the same card
+  async changeOrder(user: User, id: number, newOrder: number) {
+    const task = await this.taskRepository.findOne({ where: { id } });
+    if (task.user_id !== user.id)
+      throw new ForbiddenException('You dont have a task with that id');
+
+    if (task.order < newOrder) {
+      const tasks = await this.taskRepository.find({
+        select: {
+          id: true,
+          order: true,
+        },
+        where: {
+          user_id: task.user_id,
+          status: task.status,
+          order: MoreThan(task.order),
+        },
+      });
+
+      // const tasks = await this.taskRepository
+      //   .createQueryBuilder('task')
+      //   .where('task.user_id = :userId', { userId: task.user_id })
+      //   .andWhere('task.status = :status', { status: task.status })
+      //   .andWhere('task.order > :currentOrder', { currentOrder: task.order })
+      //   .andWhere('task.order <= :newOrder', { newOrder });
+
+      return tasks;
+    }
+  }
+
+  // This method change the status and order of the task
+  async changeStatus(
+    user: User,
+    id: number,
+    newStatus: TaskStatus,
+    newOrder: number,
+  ) {
+    const task = await this.taskRepository.findOne({ where: { id } });
+
+    if (task.user_id !== user.id)
+      throw new ForbiddenException('You dont have a task with that id');
+
+    const initialStatusTasks = await this.taskRepository.find({
+      select: {
+        id: true,
+        order: true,
+      },
+      where: {
+        user_id: Equal(task.user_id),
+        status: Equal(task.status),
+        order: MoreThan(task.order),
+      },
+    });
+
+    const updatedInitialStatusTasks = initialStatusTasks.map((task) => {
+      task.order--;
+      return task;
+    });
+
+    const initialNewStatusTasks = await this.taskRepository.find({
+      select: {
+        id: true,
+        order: true,
+      },
+      where: {
+        user_id: Equal(task.user_id),
+        status: Equal(newStatus),
+        order: MoreThanOrEqual(newOrder),
+      },
+    });
+
+    const updatedInitialNewStatusTask = initialNewStatusTasks.map((task) => {
+      task.order++;
+      return task;
+    });
+
+    task.status = newStatus;
+    task.order = newOrder;
+
+    await this.taskRepository.save(updatedInitialStatusTasks);
+    await this.taskRepository.save(updatedInitialNewStatusTask);
+    await this.taskRepository.save(task);
+
+    return { message: 'task status and order changed' };
   }
 }

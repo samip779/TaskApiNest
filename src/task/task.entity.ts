@@ -33,8 +33,8 @@ export class Task {
   status: TaskStatus;
 
   @Column()
-  userId: number;
-  @JoinColumn({ name: 'userId' })
+  user_id: number;
+  @JoinColumn({ name: 'user_id' })
   @ManyToOne(() => User, (user) => user.tasks, { onDelete: 'SET NULL' })
   user: User;
 }
