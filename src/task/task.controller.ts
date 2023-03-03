@@ -5,7 +5,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseEnumPipe,
   Post,
   Put,
   Query,
@@ -31,6 +30,9 @@ export class TaskController {
 
   @Get()
   findAll(@GetUser() user: User, @Query('status') status: TaskStatus) {
+    if (!this.taskService.validateStatusQuery(status))
+      throw new BadRequestException('invalid query param');
+
     return this.taskService.findAll(user, status);
   }
 
@@ -49,13 +51,16 @@ export class TaskController {
   changeStatus(
     @GetUser() user: User,
     @Param('id') id: number,
-    @Query('newStatus', new ParseEnumPipe(TaskStatus)) newStatus: TaskStatus,
+    @Query('newStatus') newStatus: TaskStatus,
     @Query('newOrder') newOrder: number,
   ) {
     if (!newStatus || !newOrder)
       throw new BadRequestException(
         'please provide new status and new order in query',
       );
+
+    if (!this.taskService.validateStatusQuery(newStatus))
+      throw new BadRequestException('invalid query param');
 
     return this.taskService.changeStatus(user, id, newStatus, newOrder);
   }

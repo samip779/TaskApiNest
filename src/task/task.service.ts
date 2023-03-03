@@ -88,27 +88,42 @@ export class TaskService {
       throw new ForbiddenException('You dont have a task with that id');
 
     if (task.order < newOrder) {
-      const tasks = await this.taskRepository.find({
-        select: {
-          id: true,
-          order: true,
-        },
-        where: {
-          user_id: task.user_id,
-          status: task.status,
-          order: MoreThan(task.order),
-        },
+      const tasks = await this.taskRepository
+        .createQueryBuilder('task')
+        .select('task.id, task.order')
+        .where('task.user_id = :userId', { userId: task.user_id })
+        .andWhere('task.status = :status', { status: task.status })
+        .andWhere('task.order > :currentOrder', { currentOrder: task.order })
+        .andWhere('task.order <= :newOrder', { newOrder })
+        .execute();
+
+      const updatedTasks = tasks.map((task: Task) => {
+        task.order--;
+        return task;
       });
 
-      // const tasks = await this.taskRepository
-      //   .createQueryBuilder('task')
-      //   .where('task.user_id = :userId', { userId: task.user_id })
-      //   .andWhere('task.status = :status', { status: task.status })
-      //   .andWhere('task.order > :currentOrder', { currentOrder: task.order })
-      //   .andWhere('task.order <= :newOrder', { newOrder });
-
-      return tasks;
+      await this.taskRepository.save(updatedTasks);
     }
+    if (task.order > newOrder) {
+      const tasks = await this.taskRepository
+        .createQueryBuilder('task')
+        .select('task.id, task.order')
+        .where('task.user_id = :userId', { userId: task.user_id })
+        .andWhere('task.status = :status', { status: task.status })
+        .andWhere('task.order < :currentOrder', { currentOrder: task.order })
+        .andWhere('task.order >= :newOrder', { newOrder })
+        .execute();
+
+      const updatedTasks = tasks.map((task: Task) => {
+        task.order++;
+        return task;
+      });
+
+      await this.taskRepository.save(updatedTasks);
+    }
+    task.order = newOrder;
+    await this.taskRepository.save(task);
+    return { message: 'Order changed successfully' };
   }
 
   // This method change the status and order of the task
@@ -165,5 +180,16 @@ export class TaskService {
     await this.taskRepository.save(task);
 
     return { message: 'task status and order changed' };
+  }
+
+  validateStatusQuery(status: TaskStatus) {
+    const isValid =
+      status === 'todo' ||
+      status === 'inprogress' ||
+      status === 'testing' ||
+      status === 'done' ||
+      status === undefined;
+
+    return isValid;
   }
 }
